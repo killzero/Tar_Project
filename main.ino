@@ -1,6 +1,6 @@
 uint32_t currentTime = millis(); // timer value
 uint8_t moisture[3] = {5, 6, 7}; // moisture sensor pin
-uint8_t solenoid = 8;            // solenoid pin
+uint8_t solenoid = A8;            // solenoid pin
 void setup()
 {
     for (int i = 0; i < 3; i++)
