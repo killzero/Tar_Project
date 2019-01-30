@@ -1,15 +1,16 @@
+uint8_t moisture_pin[3] = {A5, A6, A7}; // moisture sensor pin
+uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
+
 uint32_t currentTime = millis(); // timer value
-uint8_t moisture[3] = {5, 6, 7}; // moisture sensor pin
-uint8_t solenoid = A8;            // solenoid pin
+
 void setup()
 {
     for (int i = 0; i < 3; i++)
     {
-        // Declare pinmode of sensor
-        pinMode(moisture[i], INPUT);
+        pinMode(moisture_pin[i], INPUT);  // Declare pinmode of sensor
+        pinMode(solenoid_pin[i], OUTPUT); // Declare pinmode of solenoid
     }
-    pinMode(solenoid, OUTPUT); // Declare pinmode of solenoid
-    delay(1000);               // delay to prepare to run
+    delay(1000); // delay to prepare to run
 }
 /*
     When we took the readings from the dry soil, 
@@ -17,36 +18,32 @@ void setup()
     the sensor value was 10
     */
 
-bool valveOn = false;   // save state of valve
+bool valveOn[3] = {false, false, false}; // save state of valve
+
+// set range of moisture limit
+uint8_t _min[3] = {45, 45, 45};
+uint8_t _max[3] = {55, 55, 55};
 void loop()
 {
-    // set range of moisture limit
-    uint8_t min = 45, max = 50;
-
     // set timer of work (millisecond)
     if (millis() - currentTime > 200)
     {
-        uint16_t temp[3];   // Declare variable to keep measured value
-        uint16_t minTemp;
+        uint16_t moisture[3]; // Declare variable to keep measured value
         for (int i = 0; i < 3; i++)
         {
-            temp[i] = analogRead(moisture[i]);          // read sensor
-            temp[i] = map(temp[i], 550, 10, 0, 100);    // map value to percentage
-
-            // Find the minimum value
-            minTemp = min(temp[0], temp[1]);
-            minTemp = min(minTemp, temp[2]);
+            moisture[i] = analogRead(moisture_pin[i]);       // read sensor
+            moisture[i] = map(moisture[i], 550, 10, 0, 100); // map value to percentage
 
             // solenoid control
-            if (min > minTemp)
+            if (_min[i] > moisture[i])
             {
-                digitalWrite(solenoid, 1);
-                valveOn = true;
+                digitalWrite(solenoid_pin[i], 1);
+                valveOn[i] = true;
             }
-            else if (valveOn && minTemp > max)
+            else if (valveOn[i] && moisture[i] > _max[i])
             {
-                digitalWrite(solenoid, 0);
-                valveOn = false;
+                digitalWrite(solenoid_pin[i], 0);
+                valveOn[i] = false;
             }
         }
         currentTime = millis(); // reset timer
