@@ -9,6 +9,8 @@ uint32_t currentTime = millis(); // timer value
 
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
+#include <amt1001_ino.h>
+
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 void setup()
@@ -80,13 +82,14 @@ void loop()
 void readAir()
 {
 	// Get Temperature
-	uint16_t step = analogRead(TempAir_pin);
-	// uint16_t temperature = amt1001_gettemperature(step);
-	Serial.print(step);
+	uint16_t temperature = analogRead(TempAir_pin);
+	temperature = amt1001_gettemperature(temperature);
+	Serial.print(temperature);
 	Serial.print(" : ");
 	// Get Humidity
-	uint16_t step2 = analogRead(humidAir_pin);
-	// double volt = (double)step * (5.0 / 1023.0);
-	// uint16_t humidity = amt1001_gethumidity(volt);
-	Serial.println(step2);
+	uint16_t humid = analogRead(humidAir_pin);
+	double volt = (double)humid * (5.0 / 1023.0);
+	humid = amt1001_gethumidity(volt);
+	
+	Serial.println(humid);
 }
