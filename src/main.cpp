@@ -1,29 +1,50 @@
 #include <Arduino.h>
-uint8_t moisture_pin[3] = {A5, A6, A7}; // moisture sensor pin
-uint8_t solenoid_pin[3] = {5, 6, 7};	// solenoid pin
 
-#define humidAir_pin A10 // yellow
-#define TempAir_pin A12  // white
-
-uint32_t currentTime = millis(); // timer value
-
-#include <LiquidCrystal_I2C.h>
+#include <DS1307RTC.h>
+#include <TimeLib.h>
 #include <Wire.h>
-#include <amt1001_ino.h>
-
-// include the SD library:
 #include <SPI.h>
 #include <SD.h>
 
-// change this to match your SD shield or module;
-// Arduino Ethernet shield: pin 4
-// Adafruit SD shields and modules: pin 10
-// Sparkfun SD shield: pin 8
-const int chipSelect = 53;
+tmElements_t tm;
 
-File dataFile;
+File myFile;
+const int chipSelect = 10;
 
-LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
+// ---------------------- about time ---------------------------------
+void printTime();
+void print2digits(int number);
+
+void setTime();
+const char *monthName[12] = {
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+bool getTime(const char *str);
+bool getDate(const char *str);
+// --------------------------------------------------------------------
+
+uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
+uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
+
+uint32_t valveTime = millis(); // timer value
+
+void setup()
+{
+    Serial.begin(9600);
+    for (int i = 0; i < 3; i++)
+    {
+        pinMode(moisture_pin[i], INPUT_PULLUP); // Declare pinmode of sensor
+        pinMode(solenoid_pin[i], OUTPUT);       // Declare pinmode of solenoid
+    }
+    delay(1000); // delay to prepare to run
+    setTime();
+}
+/*
+    When we took the readings from the dry soil, 
+    then the sensor value was 550 and in the wet soil,
+    the sensor value was 10
+    */
 
 bool valveOn[3] = {false, false, false}; // save state of valve
 
@@ -33,144 +54,148 @@ uint8_t _max[3] = {55, 55, 55};
 
 uint16_t moisture[3]; // Declare variable to keep measured value
 
-void readAir();
-void moistureControl();
-void init_SD();
-
-void setup()
-{
-	Serial.begin(9600);
-	lcd.init();
-	lcd.backlight();
-	for (int i = 0; i < 3; i++)
-	{
-		pinMode(moisture_pin[i], INPUT);  // Declare pinmode of sensor
-		pinMode(solenoid_pin[i], OUTPUT); // Declare pinmode of solenoid
-	}
-	pinMode(TempAir_pin, INPUT);
-	pinMode(humidAir_pin, INPUT);
-
-	init_SD();
-
-	delay(1000); // delay to prepare to run
-}
-
 void loop()
 {
-	// set timer of work (millisecond)
-	if (millis() - currentTime > 500)
-	{
-		// readAir();
-		// Serial.println();
-		currentTime = millis(); // reset timer
-	}
+    // set timer of work (millisecond)
+    if (millis() - valveTime > 1000)
+    {
+        for (int i = 0; i < 1; i++)
+        {
+            moisture[i] = analogRead(moisture_pin[i]); // read sensor
+            //Serial.print(moisture[i]);
+            //Serial.print(" : ");
+            moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
+            moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
+            //Serial.println(moisture[i]);
+            printTime();
+            // solenoid controlh
+            if (_min[i] > moisture[i])
+            {
+                // digitalWrite(solenoid_pin[i], 1);
+                valveOn[i] = true;
+            }
+            else if (valveOn[i] && moisture[i] > _max[i])
+            {
+                // digitalWrite(solenoid_pin[i], 0);
+                valveOn[i] = false;
+            }
+        }
+        valveTime = millis(); // reset timer
+    }
 }
 
-void readAir()
+void setTime()
 {
-	// Get Temperature
-	uint16_t temperature = analogRead(TempAir_pin);
-	// temperature = amt1001_gettemperature(temperature);
-	Serial.print(temperature);
-	Serial.print(" : ");
-	// Get Humidity
-	uint16_t humid = analogRead(humidAir_pin);
-	double volt = (double)humid * (5.0 / 1023.0);
-	humid = amt1001_gethumidity(volt);
+    bool parse = false;
+    bool config = false;
 
-	Serial.println(humid);
+    // get the date and time the compiler was run
+    if (getDate(__DATE__) && getTime(__TIME__))
+    {
+        parse = true;
+        // and configure the RTC with this info
+        if (RTC.write(tm))
+        {
+            config = true;
+        }
+    }
+    while (!Serial)
+        ; // wait for Arduino Serial Monitor
+    delay(200);
+    if (parse && config)
+    {
+        Serial.print("DS1307 configured Time=");
+        Serial.print(__TIME__);
+        Serial.print(", Date=");
+        Serial.println(__DATE__);
+    }
+    else if (parse)
+    {
+        Serial.println("DS1307 Communication Error :-{");
+        Serial.println("Please check your circuitry");
+    }
+    else
+    {
+        Serial.print("Could not parse info from the compiler, Time=\"");
+        Serial.print(__TIME__);
+        Serial.print("\", Date=\"");
+        Serial.print(__DATE__);
+        Serial.println("\"");
+    }
 }
 
-void moistureControl()
+bool getTime(const char *str)
 {
-	/*
-    When we took the readings from the dry soil, 
-    then the sensor value was 550 and in the wet soil,
-    the sensor value was 10
-    */
-	for (int i = 0; i < 2; i++)
-	{
-		moisture[i] = analogRead(moisture_pin[i]); // read sensor
-		// moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
-		// moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
-		// Serial.print(" : ");
-		// Serial.print(moisture[i]);
+    int Hour, Min, Sec;
 
-		// lcd.clear();
-		// lcd.setCursor(0, i);
-		// lcd.print("Humid :");
-		// lcd.setCursor(9, i);
-		// lcd.print(moisture[i]);
-		// solenoid controlh
-		if (_min[i] > moisture[i])
-		{
-			// digitalWrite(solenoid_pin[i], 1);
-			valveOn[i] = true;
-		}
-		else if (valveOn[i] && moisture[i] > _max[i])
-		{
-			// digitalWrite(solenoid_pin[i], 0);
-			valveOn[i] = false;
-		}
-	}
+    if (sscanf(str, "%d:%d:%d", &Hour, &Min, &Sec) != 3)
+        return false;
+    tm.Hour = Hour;
+    tm.Minute = Min;
+    tm.Second = Sec;
+    return true;
 }
 
-void init_SD()
+bool getDate(const char *str)
 {
-	Serial.print("Initializing SD card...");
-	// make sure that the default chip select pin is set to
-	// output, even if you don't use it:
-	pinMode(SS, OUTPUT);
+    char Month[12];
+    int Day, Year;
+    uint8_t monthIndex;
 
-	// see if the card is present and can be initialized:
-	if (!SD.begin(chipSelect))
-	{
-		Serial.println("Card failed, or not present");
-		// don't do anything more:
-		while (1)
-			;
-	}
-	Serial.println("card initialized.");
-
-	// Open up the file we're going to log to!
-	dataFile = SD.open("datalog.txt", FILE_WRITE);
-	if (!dataFile)
-	{
-		Serial.println("error opening datalog.txt");
-		// Wait forever since we cant write data
-		while (1)
-			;
-	}
+    if (sscanf(str, "%s %d %d", Month, &Day, &Year) != 3)
+        return false;
+    for (monthIndex = 0; monthIndex < 12; monthIndex++)
+    {
+        if (strcmp(Month, monthName[monthIndex]) == 0)
+            break;
+    }
+    if (monthIndex >= 12)
+        return false;
+    tm.Day = Day;
+    tm.Month = monthIndex + 1;
+    tm.Year = CalendarYrToTm(Year);
+    return true;
 }
 
-void readSD()
+void printTime()
 {
-	String dataString = "";
+    if (RTC.read(tm))
+    {
+        Serial.print("Ok, Time = ");
+        print2digits(tm.Hour);
+        Serial.write(':');
+        print2digits(tm.Minute);
+        Serial.write(':');
+        print2digits(tm.Second);
+        Serial.print(", Date (D/M/Y) = ");
+        Serial.print(tm.Day);
+        Serial.write('/');
+        Serial.print(tm.Month);
+        Serial.write('/');
+        Serial.print(tmYearToCalendar(tm.Year));
+        Serial.println();
+    }
+    else
+    {
+        if (RTC.chipPresent())
+        {
+            Serial.println("The DS1307 is stopped.  Please run the SetTime");
+            Serial.println("example to initialize the time and begin running.");
+            Serial.println();
+        }
+        else
+        {
+            Serial.println("DS1307 read error!  Please check the circuitry.");
+            Serial.println();
+        }
+    }
+}
 
-	// read three sensors and append to the string:
-	for (int analogPin = 0; analogPin < 3; analogPin++)
+void print2digits(int number)
+{
+	if (number >= 0 && number < 10)
 	{
-		int sensor = analogRead(analogPin);
-		dataString += String(sensor);
-		if (analogPin < 2)
-		{
-			dataString += ",";
-		}
+		Serial.write('0');
 	}
-
-	dataFile.println(dataString);
-
-	// print to the serial port too:
-	Serial.println(dataString);
-
-	// The following line will 'save' the file to the SD card after every
-	// line of data - this will use more power and slow down how much data
-	// you can read but it's safer!
-	// If you want to speed up the system, remove the call to flush() and it
-	// will save the file only every 512 bytes - every time a sector on the
-	// SD card is filled with data.
-	dataFile.flush();
-
-	// Take 1 measurement every 500 milliseconds
-	delay(500);
+	Serial.print(number);
 }
