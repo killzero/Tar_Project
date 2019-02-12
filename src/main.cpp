@@ -7,6 +7,7 @@
 #include <SD.h>
 
 tmElements_t tm;
+tmElements_t last_tm;
 
 File myFile;
 const int chipSelect = 10;
@@ -27,7 +28,7 @@ bool getDate(const char *str);
 uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
 
-uint32_t valveTime = millis(); // timer value
+uint32_t valveTime;
 
 void setup()
 {
@@ -39,6 +40,12 @@ void setup()
     }
     delay(1000); // delay to prepare to run
     setTime();
+
+    if (RTC.read(tm))
+    {
+        // valveTime = tm.Second;
+        valveTime = millis();
+    }
 }
 /*
     When we took the readings from the dry soil, 
@@ -53,12 +60,15 @@ uint8_t _min[3] = {45, 45, 45};
 uint8_t _max[3] = {55, 55, 55};
 
 uint16_t moisture[3]; // Declare variable to keep measured value
-
+int tenppTime = 0;
+typedef unsigned long _time;
 void loop()
 {
     // set timer of work (millisecond)
-    if (millis() - valveTime > 1000)
+    if (millis() - valveTime > 2000)
     {
+        last_tm = tm;
+        
         for (int i = 0; i < 1; i++)
         {
             moisture[i] = analogRead(moisture_pin[i]); // read sensor
@@ -67,7 +77,7 @@ void loop()
             moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
             moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
             //Serial.println(moisture[i]);
-            printTime();
+            // printTime();
             // solenoid controlh
             if (_min[i] > moisture[i])
             {
@@ -166,7 +176,7 @@ void printTime()
         Serial.write(':');
         print2digits(tm.Minute);
         Serial.write(':');
-        print2digits(tm.Second);
+        print2digits(tm.Second); // int
         Serial.print(", Date (D/M/Y) = ");
         Serial.print(tm.Day);
         Serial.write('/');
@@ -193,9 +203,9 @@ void printTime()
 
 void print2digits(int number)
 {
-	if (number >= 0 && number < 10)
-	{
-		Serial.write('0');
-	}
-	Serial.print(number);
+    if (number >= 0 && number < 10)
+    {
+        Serial.write('0');
+    }
+    Serial.print(number);
 }
