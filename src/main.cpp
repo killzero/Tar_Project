@@ -7,7 +7,6 @@
 #include <SD.h>
 
 tmElements_t tm;
-tmElements_t last_tm;
 
 File myFile;
 const int chipSelect = 10;
@@ -29,10 +28,22 @@ uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
 
 uint32_t valveTime;
+bool valveOn[3] = {false, false, false}; // save state of valve
+
+// set range of moisture limit
+uint8_t _min[3] = {45, 45, 45};
+uint8_t _max[3] = {55, 55, 55};
+
+uint16_t moisture[3]; // Declare variable to keep measured value
+void controlMoisture();
+// --------------------------------------------------------------------
 
 void setup()
 {
     Serial.begin(9600);
+
+    pinMode(SS, OUTPUT);
+
     for (int i = 0; i < 3; i++)
     {
         pinMode(moisture_pin[i], INPUT_PULLUP); // Declare pinmode of sensor
@@ -47,28 +58,22 @@ void setup()
         valveTime = millis();
     }
 }
-/*
+
+void loop()
+{
+    controlMoisture(500);
+}
+
+void controlMoisture(uint8_t _time)
+{
+    /*
     When we took the readings from the dry soil, 
     then the sensor value was 550 and in the wet soil,
     the sensor value was 10
     */
-
-bool valveOn[3] = {false, false, false}; // save state of valve
-
-// set range of moisture limit
-uint8_t _min[3] = {45, 45, 45};
-uint8_t _max[3] = {55, 55, 55};
-
-uint16_t moisture[3]; // Declare variable to keep measured value
-int tenppTime = 0;
-typedef unsigned long _time;
-void loop()
-{
     // set timer of work (millisecond)
-    if (millis() - valveTime > 2000)
+    if (millis() - valveTime > _time)
     {
-        last_tm = tm;
-        
         for (int i = 0; i < 1; i++)
         {
             moisture[i] = analogRead(moisture_pin[i]); // read sensor
@@ -76,17 +81,18 @@ void loop()
             //Serial.print(" : ");
             moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
             moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
-            //Serial.println(moisture[i]);
+            // Serial.println(moisture[i]);
             // printTime();
-            // solenoid controlh
+
+            // solenoid control
             if (_min[i] > moisture[i])
             {
-                // digitalWrite(solenoid_pin[i], 1);
+                digitalWrite(solenoid_pin[i], 1);
                 valveOn[i] = true;
             }
             else if (valveOn[i] && moisture[i] > _max[i])
             {
-                // digitalWrite(solenoid_pin[i], 0);
+                digitalWrite(solenoid_pin[i], 0);
                 valveOn[i] = false;
             }
         }
@@ -137,7 +143,6 @@ void setTime()
 bool getTime(const char *str)
 {
     int Hour, Min, Sec;
-
     if (sscanf(str, "%d:%d:%d", &Hour, &Min, &Sec) != 3)
         return false;
     tm.Hour = Hour;
@@ -208,4 +213,46 @@ void print2digits(int number)
         Serial.write('0');
     }
     Serial.print(number);
+}
+
+void init_SD()
+{
+    // open the file. note that only one file can be open at a time,
+    // so you have to close this one before opening another.
+    myFile = SD.open("test.txt", FILE_WRITE);
+
+    // if the file opened okay, write to it:
+    if (myFile)
+    {
+        Serial.print("Writing to test.txt...");
+        myFile.println("testing 1, 2, 3.");
+        // close the file:
+        myFile.close();
+        Serial.println("done.");
+    }
+    else
+    {
+        // if the file didn't open, print an error:
+        Serial.println("error opening test.txt");
+    }
+
+    // re-open the file for reading:
+    myFile = SD.open("test.txt");
+    if (myFile)
+    {
+        Serial.println("test.txt:");
+
+        // read from the file until there's nothing else in it:
+        while (myFile.available())
+        {
+            Serial.write(myFile.read());
+        }
+        // close the file:
+        myFile.close();
+    }
+    else
+    {
+        // if the file didn't open, print an error:
+        Serial.println("error opening test.txt");
+    }
 }
