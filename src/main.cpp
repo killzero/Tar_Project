@@ -243,7 +243,7 @@ void init_SD()
     else
     {
         // if the file didn't open, print an error:
-        Serial.println("error opening test.txt");
+        Serial.println("log.csv");
     }
 
 }
