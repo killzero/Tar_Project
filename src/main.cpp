@@ -28,7 +28,7 @@ void init_SD();
 uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
 
-uint32_t valveTime;
+uint32_t valveTime, logTime;
 bool valveOn[3] = {false, false, false}; // save state of valve
 
 // set range of moisture limit
@@ -36,7 +36,9 @@ uint8_t _min[3] = {45, 45, 45};
 uint8_t _max[3] = {55, 55, 55};
 
 uint16_t moisture[3]; // Declare variable to keep measured value
+uint16_t lastMinute = 0;
 void controlMoisture(uint8_t _time);
+void writeLog();
 // --------------------------------------------------------------------
 
 void setup()
@@ -69,7 +71,8 @@ void setup()
 
 void loop()
 {
-    // controlMoisture(500);
+    writeLog();
+    controlMoisture(500);
 }
 
 void controlMoisture(uint8_t _time)
@@ -89,6 +92,7 @@ void controlMoisture(uint8_t _time)
             //Serial.print(" : ");
             moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
             moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
+
             // Serial.println(moisture[i]);
             // printTime();
 
@@ -233,17 +237,49 @@ void init_SD()
     if (myFile)
     {
         Serial.print("Writing to test.txt...");
-        myFile.println("hour,minute,day,mount,year");
-        myFile.println("1,2,3,4,5");
+        // myFile.println("hour,minute,day,mount,year");
         // close the file:
-        
+
         myFile.close();
-        Serial.println("done.");
+        Serial.println("SD is on.");
     }
     else
     {
         // if the file didn't open, print an error:
-        Serial.println("log.csv");
+        Serial.println("can't open log.csv");
     }
+}
 
+void writeLog()
+{
+    if (tm.Minute % 5 == 0 && tm.Minute != lastMinute)
+    {
+        myFile = SD.open("log.csv", FILE_WRITE);
+        if (myFile)
+        {
+            Serial.print("Writing log.csv ...");
+            myFile.print(tm.Hour);
+            myFile.print(",");
+            myFile.print(tm.Minute);
+            myFile.print(",");
+            myFile.print(tm.Day);
+            myFile.print(",");
+            myFile.print(tm.Month);
+            myFile.print(",");
+            myFile.print(tmYearToCalendar(tm.Year));
+            myFile.print(",");
+            myFile.print(moisture[0]);
+            myFile.print(",");
+            myFile.print(moisture[1]);
+            myFile.print(",");
+            myFile.print(moisture[2]);
+            
+            // close the file:
+            myFile.close();
+        }
+        else{
+            Serial.println("can't open log.csv");
+        }
+        lastMinute = tm.Minute;
+    }
 }
