@@ -35,7 +35,7 @@ uint8_t _min[3] = {45, 45, 45};
 uint8_t _max[3] = {55, 55, 55};
 
 uint16_t moisture[3]; // Declare variable to keep measured value
-void controlMoisture();
+void controlMoisture(uint8_t _time);
 // --------------------------------------------------------------------
 
 void setup()
@@ -82,7 +82,7 @@ void controlMoisture(uint8_t _time)
             moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
             moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
             // Serial.println(moisture[i]);
-            // printTime();
+            printTime();
 
             // solenoid control
             if (_min[i] > moisture[i])
