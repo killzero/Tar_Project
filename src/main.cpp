@@ -51,14 +51,7 @@ void setup()
     Serial.begin(9600);
 
     pinMode(SS, OUTPUT);
-    if (!SD.begin(10, 11, 12, 13))
-    {
-        Serial.println("Card failed, or not present");
-        // don't do anything more:
-        while (1)
-            ;
-    }
-    Serial.println("card initialized.");
+    init_SD();
     for (int i = 0; i < 3; i++)
     {
         pinMode(moisture_pin[i], INPUT_PULLUP); // Declare pinmode of sensor
@@ -70,7 +63,7 @@ void setup()
 
     delay(1000); // delay to prepare to run
     setTime();
-    init_SD();
+
     if (RTC.read(tm))
     {
         // valveTime = tm.Second;
@@ -238,25 +231,14 @@ void print2digits(int number)
 
 void init_SD()
 {
-    // open the file. note that only one file can be open at a time,
-    // so you have to close this one before opening another.
-    myFile = SD.open("log.csv", FILE_WRITE);
-
-    // if the file opened okay, write to it:
-    if (myFile)
+    if (!SD.begin(10, 11, 12, 13))
     {
-        Serial.print("Writing to test.txt...");
-        // myFile.println("hour,minute,day,mount,year");
-        // close the file:
-
-        myFile.close();
-        Serial.println("SD is on.");
+        Serial.println("Card failed, or not present");
+        // don't do anything more:
+        while (1)
+            ;
     }
-    else
-    {
-        // if the file didn't open, print an error:
-        Serial.println("can't open log.csv");
-    }
+    Serial.println("card initialized.");
 }
 
 void writeLog()
@@ -282,10 +264,10 @@ void writeLog()
             myFile.print(moisture[1]);
             myFile.print(",");
             myFile.print(moisture[2]);
-            // myFile.print(",");
-            // myFile.print(getAirTemp());
-            // myFile.print(",");
-            // myFile.print(getAirHumid());
+            myFile.print(",");
+            myFile.print(getAirTemp());
+            myFile.print(",");
+            myFile.print(getAirHumid());
 
             // close the file:
             myFile.close();
