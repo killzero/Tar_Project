@@ -40,7 +40,7 @@ uint8_t _max[3] = {55, 55, 55};
 
 uint16_t moisture[3]; // Declare variable to keep measured value
 uint16_t lastMinute = 0;
-void controlMoisture(uint8_t _time);
+void controlMoisture(uint16_t _time);
 void writeLog();
 uint16_t getAirTemp();
 uint16_t getAirHumid();
@@ -84,7 +84,7 @@ void loop()
     controlMoisture(500);
 }
 
-void controlMoisture(uint8_t _time)
+void controlMoisture(uint16_t _time)
 {
     /*
     When we took the readings from the dry soil, 
@@ -282,10 +282,10 @@ void writeLog()
             myFile.print(moisture[1]);
             myFile.print(",");
             myFile.print(moisture[2]);
-            myFile.print(",");
-            myFile.print(getAirTemp());
-            myFile.print(",");
-            myFile.print(getAirHumid());
+            // myFile.print(",");
+            // myFile.print(getAirTemp());
+            // myFile.print(",");
+            // myFile.print(getAirHumid());
 
             // close the file:
             myFile.close();
