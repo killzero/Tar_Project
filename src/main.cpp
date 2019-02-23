@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#include <amt1001_ino.h>
 #include <DS1307RTC.h>
 #include <TimeLib.h>
 #include <Wire.h>
@@ -11,6 +12,8 @@ tmElements_t tm;
 File myFile;
 const int chipSelect = 10;
 
+#define airTemp_pin A2
+#define airHumid_pin A3
 // ---------------------- about time ---------------------------------
 void printTime();
 void print2digits(int number);
@@ -39,6 +42,8 @@ uint16_t moisture[3]; // Declare variable to keep measured value
 uint16_t lastMinute = 0;
 void controlMoisture(uint8_t _time);
 void writeLog();
+uint16_t getAirTemp();
+uint16_t getAirHumid();
 // --------------------------------------------------------------------
 
 void setup()
@@ -59,6 +64,10 @@ void setup()
         pinMode(moisture_pin[i], INPUT_PULLUP); // Declare pinmode of sensor
         pinMode(solenoid_pin[i], OUTPUT);       // Declare pinmode of solenoid
     }
+
+    pinMode(airTemp_pin, INPUT);
+    pinMode(airHumid_pin, INPUT);
+
     delay(1000); // delay to prepare to run
     setTime();
     init_SD();
@@ -273,13 +282,35 @@ void writeLog()
             myFile.print(moisture[1]);
             myFile.print(",");
             myFile.print(moisture[2]);
-            
+            myFile.print(",");
+            myFile.print(getAirTemp());
+            myFile.print(",");
+            myFile.print(getAirHumid());
+
             // close the file:
             myFile.close();
         }
-        else{
+        else
+        {
             Serial.println("can't open log.csv");
         }
         lastMinute = tm.Minute;
     }
+}
+
+uint16_t getAirTemp()
+{
+    // Get Temperature
+    uint16_t temperature = analogRead(airTemp_pin);
+    temperature = amt1001_gettemperature(temperature);
+    return temperature;
+}
+
+uint16_t getAirHumid()
+{
+    // Get Humidity
+    uint16_t humidity = analogRead(airHumid_pin);
+    double volt = (double)humidity * (5.0 / 1023.0);
+    humidity = amt1001_gethumidity(volt);
+    return humidity;
 }
