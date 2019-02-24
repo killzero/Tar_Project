@@ -68,6 +68,7 @@ void setup()
     {
         // valveTime = tm.Second;
         valveTime = millis();
+        logTime = millis();
     }
 }
 
@@ -244,7 +245,7 @@ void init_SD()
 
 void writeLog()
 {
-    if (tm.Minute % 2 == 0 && tm.Minute != lastMinute)
+    if (millis() - logTime > 30000)
     {
 
         if (myFile)
@@ -273,7 +274,7 @@ void writeLog()
         {
             Serial.println("can't open log.csv");
         }
-        lastMinute = tm.Minute;
+        logTime = millis();
     }
 }
 
