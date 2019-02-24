@@ -51,7 +51,17 @@ void setup()
     Serial.begin(9600);
 
     pinMode(SS, OUTPUT);
-    init_SD();
+    if (!SD.begin(10, 11, 12, 13))
+    {
+        Serial.println("Card failed, or not present");
+        // don't do anything more:
+        while (1)
+            ;
+    }
+    else
+        Serial.println("card initialized.");
+
+    // init_SD();
     for (int i = 0; i < 3; i++)
     {
         pinMode(moisture_pin[i], INPUT_PULLUP); // Declare pinmode of sensor
@@ -232,15 +242,6 @@ void print2digits(int number)
 
 void init_SD()
 {
-    if (!SD.begin(10, 11, 12, 13))
-    {
-        Serial.println("Card failed, or not present");
-        // don't do anything more:
-        while (1)
-            ;
-    }
-
-    Serial.println("card initialized.");
 }
 
 void writeLog()
