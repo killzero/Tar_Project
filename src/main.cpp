@@ -238,14 +238,15 @@ void init_SD()
         while (1)
             ;
     }
+    myFile = SD.open("log02.csv", FILE_WRITE);
     Serial.println("card initialized.");
 }
 
 void writeLog()
 {
-    if (tm.Minute % 5 == 0 && tm.Minute != lastMinute)
+    if (tm.Minute % 2 == 0 && tm.Minute != lastMinute)
     {
-        myFile = SD.open("log.csv", FILE_WRITE);
+        
         if (myFile)
         {
             Serial.print("Writing log.csv ...");
@@ -267,10 +268,10 @@ void writeLog()
             myFile.print(",");
             myFile.print(getAirTemp());
             myFile.print(",");
-            myFile.print(getAirHumid());
+            myFile.println(getAirHumid());
 
             // close the file:
-            myFile.close();
+            //myFile.close();
         }
         else
         {
