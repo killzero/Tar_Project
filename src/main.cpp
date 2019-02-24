@@ -238,7 +238,7 @@ void init_SD()
         while (1)
             ;
     }
-    myFile = SD.open("log02.csv", FILE_WRITE);
+
     Serial.println("card initialized.");
 }
 
@@ -246,32 +246,28 @@ void writeLog()
 {
     if (tm.Minute % 2 == 0 && tm.Minute != lastMinute)
     {
-        
+
         if (myFile)
         {
-            Serial.print("Writing log.csv ...");
-            myFile.print(tm.Hour);
-            myFile.print(",");
-            myFile.print(tm.Minute);
-            myFile.print(",");
-            myFile.print(tm.Day);
-            myFile.print(",");
-            myFile.print(tm.Month);
-            myFile.print(",");
-            myFile.print(tmYearToCalendar(tm.Year));
-            myFile.print(",");
-            myFile.print(moisture[0]);
-            myFile.print(",");
-            myFile.print(moisture[1]);
-            myFile.print(",");
-            myFile.print(moisture[2]);
-            myFile.print(",");
-            myFile.print(getAirTemp());
-            myFile.print(",");
-            myFile.println(getAirHumid());
+            myFile = SD.open("log02.csv", FILE_WRITE);
+            Serial.println("Writing log02.csv ...");
+            String _temp = String(tm.Hour) + ',' + String(tm.Minute) + ',' + String(tm.Day);
+            _temp += ',' + String(tm.Month) + ',' + tmYearToCalendar(tm.Year);
+            Serial.println(_temp);
+            myFile.print(_temp);
+            delay(10);
+            _temp = "";
+            for (uint8_t i = 0; i < 3; i++)
+            {
+                _temp += ',' + String(moisture[i]);
+            }
+
+            _temp += ',' + String(getAirTemp()) + ',' + String(getAirHumid());
+
+            myFile.println(_temp);
 
             // close the file:
-            //myFile.close();
+            myFile.close();
         }
         else
         {
