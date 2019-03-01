@@ -1,6 +1,6 @@
 #include <Arduino.h>
-
 #include <LiquidCrystal_I2C.h>
+#include <amt1001_ino.h>
 #include <DS1307RTC.h>
 #include <TimeLib.h>
 #include <Wire.h>
@@ -13,6 +13,8 @@ tmElements_t tm;
 File myFile;
 const int chipSelect = 10;
 
+#define airTemp_pin A2
+#define airHumid_pin A3
 // ---------------------- about time ---------------------------------
 void printTime();
 void print2digits(int number);
@@ -30,7 +32,7 @@ void init_SD();
 uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
 
-uint32_t valveTime, logTime;
+uint32_t valveTime, logTime, lcdTime;
 bool valveOn[3] = {false, false, false}; // save state of valve
 
 // set range of moisture limit
@@ -39,12 +41,12 @@ uint8_t _max[3] = {55, 55, 55};
 
 uint16_t moisture[3]; // Declare variable to keep measured value
 
-void controlMoisture(uint8_t _time);
-
 uint16_t lastMinute = 0;
-void controlMoisture(uint8_t _time);
+void controlMoisture(uint16_t _time);
 void writeLog();
-void showLCD();
+void showLCD(uint16_t _time);
+uint16_t getAirTemp();
+uint16_t getAirHumid();
 
 // --------------------------------------------------------------------
 
@@ -62,29 +64,39 @@ void setup()
         while (1)
             ;
     }
-    Serial.println("card initialized.");
+    else
+        Serial.println("card initialized.");
+
+    // init_SD();
     for (int i = 0; i < 3; i++)
     {
         pinMode(moisture_pin[i], INPUT_PULLUP); // Declare pinmode of sensor
         pinMode(solenoid_pin[i], OUTPUT);       // Declare pinmode of solenoid
     }
+
+    pinMode(airTemp_pin, INPUT);
+    pinMode(airHumid_pin, INPUT);
+
     delay(1000); // delay to prepare to run
     setTime();
-    init_SD();
+
     if (RTC.read(tm))
     {
         // valveTime = tm.Second;
         valveTime = millis();
+        logTime = millis();
+        lcdTime = millis();
     }
 }
 
 void loop()
 {
-    writeLog();
     controlMoisture(500);
+    showLCD(1000);
+    writeLog();
 }
 
-void controlMoisture(uint8_t _time)
+void controlMoisture(uint16_t _time)
 {
     /*
     When we took the readings from the dry soil, 
@@ -238,32 +250,13 @@ void print2digits(int number)
 
 void init_SD()
 {
-    // open the file. note that only one file can be open at a time,
-    // so you have to close this one before opening another.
-    myFile = SD.open("log.csv", FILE_WRITE);
-
-    // if the file opened okay, write to it:
-    if (myFile)
-    {
-        Serial.print("Writing to test.txt...");
-        // myFile.println("hour,minute,day,mount,year");
-        // close the file:
-
-        myFile.close();
-        Serial.println("SD is on.");
-    }
-    else
-    {
-        // if the file didn't open, print an error:
-        Serial.println("can't open log.csv");
-    }
 }
 
 void writeLog()
 {
-    if (tm.Minute % 5 == 0 && tm.Minute != lastMinute)
+    if (millis() - logTime > 30000)
     {
-        myFile = SD.open("log.csv", FILE_WRITE);
+
         if (myFile)
         {
             Serial.print("Writing log.csv ...");
@@ -282,6 +275,22 @@ void writeLog()
             myFile.print(moisture[1]);
             myFile.print(",");
             myFile.print(moisture[2]);
+            myFile = SD.open("log02.csv", FILE_WRITE);
+            Serial.println("Writing log02.csv ...");
+            String _temp = String(tm.Hour) + ',' + String(tm.Minute) + ',' + String(tm.Day);
+            _temp += ',' + String(tm.Month) + ',' + tmYearToCalendar(tm.Year);
+            Serial.println(_temp);
+            myFile.print(_temp);
+            delay(10);
+            _temp = "";
+            for (uint8_t i = 0; i < 3; i++)
+            {
+                _temp += ',' + String(moisture[i]);
+            }
+
+            _temp += ',' + String(getAirTemp()) + ',' + String(getAirHumid());
+
+            myFile.println(_temp);
 
             // close the file:
             myFile.close();
@@ -290,12 +299,54 @@ void writeLog()
         {
             Serial.println("can't open log.csv");
         }
-        lastMinute = tm.Minute;
+        logTime = millis();
     }
 }
 
-void showLCD()
+uint16_t getAirTemp()
 {
-    lcd.setCursor(1, 1);
-    lcd.print("Hello, world!");
+    // Get Temperature
+    uint16_t temperature = analogRead(airTemp_pin);
+    temperature = amt1001_gettemperature(temperature);
+    return temperature;
+}
+
+uint16_t getAirHumid()
+{
+    // Get Humidity
+    uint16_t humidity = analogRead(airHumid_pin);
+    double volt = (double)humidity * (5.0 / 1023.0);
+    humidity = amt1001_gethumidity(volt);
+    return humidity;
+}
+
+void showLCD(uint16_t _time)
+{
+    if (millis() - lcdTime > _time)
+    {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("moi_1:");
+        lcd.print(moisture[0]);
+        lcd.setCursor(8, 0);
+        lcd.print("moi_2:");
+        lcd.print(moisture[1]);
+        lcd.setCursor(0, 1);
+        lcd.print("moi_3:");
+        lcd.print(moisture[2]);
+        lcd.setCursor(8, 1);
+        lcd.print("Air:");
+        lcd.print(getAirHumid());
+        lcd.setCursor(0, 2);
+        lcd.print("Temp:");
+        lcd.print(getAirTemp());
+        lcd.setCursor(0, 3);
+        lcd.print(tm.Day);
+        lcd.write('/');
+        lcd.print(tm.Month);
+        lcd.write('/');
+        lcd.print(tmYearToCalendar(tm.Year));
+
+        lcdTime = millis();
+    }
 }
