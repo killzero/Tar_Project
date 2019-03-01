@@ -1,11 +1,13 @@
 #include <Arduino.h>
 
+#include <LiquidCrystal_I2C.h>
 #include <DS1307RTC.h>
 #include <TimeLib.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 tmElements_t tm;
 
 File myFile;
@@ -22,12 +24,13 @@ const char *monthName[12] = {
 
 bool getTime(const char *str);
 bool getDate(const char *str);
+void init_SD();
 // --------------------------------------------------------------------
 
 uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
 
-uint32_t valveTime;
+uint32_t valveTime, logTime;
 bool valveOn[3] = {false, false, false}; // save state of valve
 
 // set range of moisture limit
@@ -35,15 +38,31 @@ uint8_t _min[3] = {45, 45, 45};
 uint8_t _max[3] = {55, 55, 55};
 
 uint16_t moisture[3]; // Declare variable to keep measured value
+
 void controlMoisture(uint8_t _time);
+
+uint16_t lastMinute = 0;
+void controlMoisture(uint8_t _time);
+void writeLog();
+void showLCD();
+
 // --------------------------------------------------------------------
 
 void setup()
 {
     Serial.begin(9600);
+    lcd.init(); // initialize the lcd
+    lcd.backlight();
 
     pinMode(SS, OUTPUT);
-
+    if (!SD.begin(10, 11, 12, 13))
+    {
+        Serial.println("Card failed, or not present");
+        // don't do anything more:
+        while (1)
+            ;
+    }
+    Serial.println("card initialized.");
     for (int i = 0; i < 3; i++)
     {
         pinMode(moisture_pin[i], INPUT_PULLUP); // Declare pinmode of sensor
@@ -51,7 +70,7 @@ void setup()
     }
     delay(1000); // delay to prepare to run
     setTime();
-
+    init_SD();
     if (RTC.read(tm))
     {
         // valveTime = tm.Second;
@@ -61,6 +80,7 @@ void setup()
 
 void loop()
 {
+    writeLog();
     controlMoisture(500);
 }
 
@@ -81,6 +101,7 @@ void controlMoisture(uint8_t _time)
             //Serial.print(" : ");
             moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
             moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
+
             // Serial.println(moisture[i]);
             printTime();
 
@@ -219,40 +240,62 @@ void init_SD()
 {
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
-    myFile = SD.open("test.txt", FILE_WRITE);
+    myFile = SD.open("log.csv", FILE_WRITE);
 
     // if the file opened okay, write to it:
     if (myFile)
     {
         Serial.print("Writing to test.txt...");
-        myFile.println("testing 1, 2, 3.");
+        // myFile.println("hour,minute,day,mount,year");
         // close the file:
+
         myFile.close();
-        Serial.println("done.");
+        Serial.println("SD is on.");
     }
     else
     {
         // if the file didn't open, print an error:
-        Serial.println("error opening test.txt");
+        Serial.println("can't open log.csv");
     }
+}
 
-    // re-open the file for reading:
-    myFile = SD.open("test.txt");
-    if (myFile)
+void writeLog()
+{
+    if (tm.Minute % 5 == 0 && tm.Minute != lastMinute)
     {
-        Serial.println("test.txt:");
-
-        // read from the file until there's nothing else in it:
-        while (myFile.available())
+        myFile = SD.open("log.csv", FILE_WRITE);
+        if (myFile)
         {
-            Serial.write(myFile.read());
+            Serial.print("Writing log.csv ...");
+            myFile.print(tm.Hour);
+            myFile.print(",");
+            myFile.print(tm.Minute);
+            myFile.print(",");
+            myFile.print(tm.Day);
+            myFile.print(",");
+            myFile.print(tm.Month);
+            myFile.print(",");
+            myFile.print(tmYearToCalendar(tm.Year));
+            myFile.print(",");
+            myFile.print(moisture[0]);
+            myFile.print(",");
+            myFile.print(moisture[1]);
+            myFile.print(",");
+            myFile.print(moisture[2]);
+
+            // close the file:
+            myFile.close();
         }
-        // close the file:
-        myFile.close();
+        else
+        {
+            Serial.println("can't open log.csv");
+        }
+        lastMinute = tm.Minute;
     }
-    else
-    {
-        // if the file didn't open, print an error:
-        Serial.println("error opening test.txt");
-    }
+}
+
+void showLCD()
+{
+    lcd.setCursor(1, 1);
+    lcd.print("Hello, world!");
 }
