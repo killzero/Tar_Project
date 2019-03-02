@@ -254,7 +254,7 @@ void init_SD()
 
 void writeLog()
 {
-    if (millis() - logTime > 30000)
+    if (millis() - logTime > 60000 && RTC.read(tm))
     {
 
         if (myFile)
