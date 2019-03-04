@@ -42,9 +42,9 @@ uint8_t _max[3] = {55, 55, 55};
 uint16_t moisture[3]; // Declare variable to keep measured value
 
 uint16_t lastMinute = 0;
-void controlMoisture(uint16_t _time);
+void controlMoisture(uint16_t interval);
 void writeLog();
-void showLCD(uint16_t _time);
+void showLCD(uint16_t interval);
 uint16_t getAirTemp();
 uint16_t getAirHumid();
 
@@ -96,7 +96,7 @@ void loop()
     writeLog();
 }
 
-void controlMoisture(uint16_t _time)
+void controlMoisture(uint16_t interval)
 {
     /*
     When we took the readings from the dry soil, 
@@ -104,7 +104,7 @@ void controlMoisture(uint16_t _time)
     the sensor value was 10
     */
     // set timer of work (millisecond)
-    if (millis() - valveTime > _time)
+    if (millis() - valveTime > interval)
     {
         for (int i = 0; i < 1; i++)
         {
@@ -120,12 +120,12 @@ void controlMoisture(uint16_t _time)
             // solenoid control
             if (_min[i] > moisture[i])
             {
-                digitalWrite(solenoid_pin[i], 1);
+                //digitalWrite(solenoid_pin[i], 1);
                 valveOn[i] = true;
             }
             else if (valveOn[i] && moisture[i] > _max[i])
             {
-                digitalWrite(solenoid_pin[i], 0);
+                //digitalWrite(solenoid_pin[i], 0);
                 valveOn[i] = false;
             }
         }
@@ -248,10 +248,6 @@ void print2digits(int number)
     Serial.print(number);
 }
 
-void init_SD()
-{
-}
-
 void writeLog()
 {
     if (millis() - logTime > 60000 && RTC.read(tm))
@@ -320,9 +316,9 @@ uint16_t getAirHumid()
     return humidity;
 }
 
-void showLCD(uint16_t _time)
+void showLCD(uint16_t interval)
 {
-    if (millis() - lcdTime > _time)
+    if (millis() - lcdTime > interval)
     {
         lcd.clear();
         lcd.setCursor(0, 0);
