@@ -31,7 +31,7 @@ void init_SD();
 
 uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
-
+bool relayState[3] = {0, 0, 0};
 uint32_t valveTime, logTime, lcdTime;
 bool valveOn[3] = {false, false, false}; // save state of valve
 
@@ -252,7 +252,7 @@ void writeLog()
 {
     if (millis() - logTime > 60000 && RTC.read(tm))
     {
-
+        myFile = SD.open("log02.csv", FILE_WRITE);
         if (myFile)
         {
             Serial.print("Writing log.csv ...");
@@ -265,13 +265,16 @@ void writeLog()
             myFile.print(tm.Month);
             myFile.print(",");
             myFile.print(tmYearToCalendar(tm.Year));
-            myFile.print(",");
-            myFile.print(moisture[0]);
-            myFile.print(",");
-            myFile.print(moisture[1]);
-            myFile.print(",");
-            myFile.print(moisture[2]);
-            myFile = SD.open("log02.csv", FILE_WRITE);
+            for (uint8_t i = 0; i < 3; i++)
+            {
+                myFile.print(",");
+                myFile.print(moisture[i]);
+            }
+            for (uint8_t i = 0; i < 3; i++)
+            {
+                myFile.print(",");
+                myFile.print(valveOn[i]);
+            }
             Serial.println("Writing log02.csv ...");
             String _temp = String(tm.Hour) + ',' + String(tm.Minute) + ',' + String(tm.Day);
             _temp += ',' + String(tm.Month) + ',' + tmYearToCalendar(tm.Year);
