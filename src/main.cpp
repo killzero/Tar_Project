@@ -116,11 +116,11 @@ void controlMoisture(uint16_t interval)
 
             printTime();
             bool allValve = false;
-            for(int i = 0; i < 3; i++)
+            for (int i = 0; i < 3; i++)
             {
                 allValve = allValve || valveOn[i];
             }
-            
+
             // solenoid control
             if (_min[i] > moisture[i] && !allValve)
             {
@@ -310,7 +310,7 @@ uint16_t getAirTemp()
 {
     // Get Temperature
     uint16_t temperature = analogRead(airTemp_pin);
-    temperature = amt1001_gettemperature(temperature);
+    temperature = temperature * 5 / 1023 * 80 / 0.8;
     return temperature;
 }
 
