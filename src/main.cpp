@@ -310,7 +310,7 @@ uint16_t getAirTemp()
 {
     // Get Temperature
     uint16_t temperature = analogRead(airTemp_pin);
-    temperature = temperature * 5 / 1023 * 80 / 0.8;
+    temperature = temperature * 5 / 1023 * 100;//80 / 0.8;
     return temperature;
 }
 
