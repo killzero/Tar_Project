@@ -45,7 +45,7 @@ uint16_t lastMinute = 0;
 void controlMoisture(uint16_t interval);
 void writeLog();
 void showLCD(uint16_t interval);
-uint16_t getAirTemp();
+float getAirTemp();
 uint16_t getAirHumid();
 
 // --------------------------------------------------------------------
@@ -306,10 +306,10 @@ void writeLog()
     }
 }
 
-uint16_t getAirTemp()
+float getAirTemp()
 {
     // Get Temperature
-    uint16_t temperature = analogRead(airTemp_pin);
+    float temperature = analogRead(airTemp_pin);
     temperature = temperature * 500 / 1023;// * 5 / 1023 * 10080 / 0.8;
     return temperature;
 }
