@@ -30,7 +30,7 @@ void init_SD();
 // --------------------------------------------------------------------
 
 uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
-uint8_t solenoid_pin[3] = {5, 6, 7};    // solenoid pin
+uint8_t solenoid_pin[3] = {5, 6, 7};    // 2 leg solenoid pin
 bool relayState[3] = {0, 0, 0};
 uint32_t valveTime, logTime, lcdTime;
 bool valveOn[3] = {false, false, false}; // save state of valve
@@ -124,12 +124,12 @@ void controlMoisture(uint16_t interval)
             // solenoid control
             if (_min[i] > moisture[i] && !allValve)
             {
-                //digitalWrite(solenoid_pin[i], 1);
+                digitalWrite(solenoid_pin[i], 1);
                 valveOn[i] = true;
             }
             else if (valveOn[i] && moisture[i] > _max[i])
             {
-                //digitalWrite(solenoid_pin[i], 0);
+                digitalWrite(solenoid_pin[i], 0);
                 valveOn[i] = false;
             }
         }
@@ -310,7 +310,7 @@ float getAirTemp()
 {
     // Get Temperature
     float temperature = analogRead(airTemp_pin);
-    temperature = temperature * 500 / 1023;// * 5 / 1023 * 10080 / 0.8;
+    temperature = temperature * 500 / 1023; // * 5 / 1023 * 10080 / 0.8;
     return temperature;
 }
 
