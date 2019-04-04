@@ -32,7 +32,8 @@ void init_SD();
 uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // 2 leg solenoid pin
 bool relayState[3] = {0, 0, 0};
-uint32_t valveTime, logTime, lcdTime;
+uint32_t valveTime;
+uint32_t _interval, logTime, lcdTime;
 bool valveOn[3] = {false, false, false}; // save state of valve
 
 // set range of moisture limit
@@ -82,8 +83,7 @@ void setup()
 
     if (RTC.read(tm))
     {
-        // valveTime = tm.Second;
-        valveTime = millis();
+        _interval = millis();
         logTime = millis();
         lcdTime = millis();
     }
@@ -104,7 +104,7 @@ void controlMoisture(uint16_t interval)
     the sensor value was 10
     */
     // set timer of work (millisecond)
-    if (millis() - valveTime > interval)
+    if (millis() - _interval > interval)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -121,19 +121,31 @@ void controlMoisture(uint16_t interval)
                 allValve = allValve || valveOn[i];
             }
 
-            // solenoid control
-            if (_min[i] > moisture[i] && !allValve)
-            {
+            uint8_t _Vinterval = millis() - valveTime;
+            /* *************** solenoid control ******************* */
+            if ((_min[i] > moisture[i]) && !allValve && _Vinterval > 14000)
+            { // moisture LOW and valve OFF     // rested
                 digitalWrite(solenoid_pin[i], 1);
                 valveOn[i] = true;
+                valveTime = millis();
             }
-            else if (valveOn[i] && moisture[i] > _max[i])
-            {
+            else if (moisture[i] > _max[i] && valveOn[i])
+            { // moisture HIGH and valve ON
                 digitalWrite(solenoid_pin[i], 0);
                 valveOn[i] = false;
             }
+            else
+            {
+                // moisture HIGH and valve OFF
+                // moisture LOW and valve ON
+                if (_Vinterval > 2000)
+                { // restting
+                    digitalWrite(solenoid_pin[i], 0);
+                    valveOn[i] = false;
+                }
+            }
         }
-        valveTime = millis(); // reset timer
+        _interval = millis(); // reset timer
     }
 }
 
