@@ -33,7 +33,7 @@ uint8_t moisture_pin[3] = {A4, A5, A6}; // moisture sensor pin
 uint8_t solenoid_pin[3] = {5, 6, 7};    // 2 leg solenoid pin
 bool relayState[3] = {0, 0, 0};
 uint32_t valveTime;
-uint32_t _interval, logTime, lcdTime;
+uint32_t _controlTime, logTime, lcdTime;
 bool valveOn[3] = {false, false, false}; // save state of valve
 
 // set range of moisture limit
@@ -83,7 +83,7 @@ void setup()
 
     if (RTC.read(tm))
     {
-        _interval = 0;
+        _controlTime = millis();
         logTime = millis();
         lcdTime = millis();
     }
@@ -98,13 +98,8 @@ void loop()
 
 void controlMoisture(uint16_t interval)
 {
-    /*
-    When we took the readings from the dry soil, 
-    then the sensor value was 550 and in the wet soil,
-    the sensor value was 10
-    */
     // set timer of work (millisecond)
-    if (millis() - _interval > interval)
+    if (millis() - _controlTime > interval)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -145,7 +140,7 @@ void controlMoisture(uint16_t interval)
                 }
             }
         }
-        _interval = millis(); // reset timer
+        _controlTime = millis(); // reset timer
     }
 }
 
