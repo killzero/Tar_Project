@@ -83,7 +83,7 @@ void setup()
 
     if (RTC.read(tm))
     {
-        _interval = millis();
+        _interval = 0;
         logTime = millis();
         lcdTime = millis();
     }
