@@ -104,8 +104,6 @@ void controlMoisture(uint16_t interval)
         for (int i = 0; i < 3; i++)
         {
             moisture[i] = analogRead(moisture_pin[i]); // read sensor
-            //Serial.print(moisture[i]);
-            //Serial.print(" : ");
             moisture[i] = constrain(moisture[i], 0, 550);   // 550 - 10
             moisture[i] = map(moisture[i], 550, 0, 0, 100); // map value to percentage
 
@@ -116,9 +114,9 @@ void controlMoisture(uint16_t interval)
                 allValve = allValve || valveOn[i];
             }
 
-            uint8_t _Vinterval = millis() - valveTime;
+            uint32_t _Vinterval = millis() - valveTime;
             /* *************** solenoid control ******************* */
-            if ((_min[i] > moisture[i]) && !allValve && _Vinterval > 14000)
+            if ((_min[i] > moisture[i]) && !allValve && _Vinterval > 122000)
             { // moisture LOW and valve OFF     // rested
                 digitalWrite(solenoid_pin[i], 1);
                 valveOn[i] = true;
